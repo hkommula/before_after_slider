@@ -253,7 +253,7 @@
       transform: translateX(-50%);
       pointer-events: none;
       transition: left 0.16s ease-out;
-      z-index: 2;
+      z-index: 3;
     }
 
     .comparison-slider.is-dragging .comparison-handle {
@@ -304,7 +304,7 @@
       margin: 0 2px;
     }
 
-    /* Labels (flipped: AFTER on left, BEFORE on right) */
+    /* Labels (FLIPPED, and now outside zoomed inner so they don't scale) */
 
     .comparison-label {
       position: absolute;
@@ -317,7 +317,7 @@
       letter-spacing: 0.09em;
       backdrop-filter: blur(8px);
       border: 1px solid rgba(209, 213, 219, 0.7);
-      z-index: 3;
+      z-index: 4;
     }
 
     .comparison-label-after {
@@ -496,13 +496,13 @@
                 draggable="false"
               />
             </div>
-
-            <!-- Flipped labels: AFTER on left, BEFORE on right -->
-            <div class="comparison-label comparison-label-after">After</div>
-            <div class="comparison-label comparison-label-before">Before</div>
           </div>
 
-          <!-- Slider handle (not scaled by zoom) -->
+          <!-- Labels now outside zoomed inner -->
+          <div class="comparison-label comparison-label-after">After</div>
+          <div class="comparison-label comparison-label-before">Before</div>
+
+          <!-- Slider handle -->
           <div class="comparison-handle">
             <div class="comparison-handle-line"></div>
             <div class="comparison-handle-knob"></div>
@@ -539,14 +539,14 @@
       const thumbList = document.getElementById("thumbList");
       const zoomNavPreview = document.getElementById("zoomNavPreview");
 
-      /* -------- Build thumbnail buttons from imageSets -------- */
+      /* -------- Build thumbnail buttons -------- */
       imageSets.forEach((set, index) => {
         const btn = document.createElement("button");
         btn.className = "thumb-btn";
         btn.dataset.index = index;
 
         const img = document.createElement("img");
-        img.src = set.after; // use AFTER as preview
+        img.src = set.after;
         img.alt = set.label || `Set ${index + 1}`;
         btn.appendChild(img);
 
@@ -612,14 +612,14 @@
       function updateNavBox() {
         if (!zoomNavPreview) return;
 
-        // set background to AFTER image
         zoomNavPreview.style.backgroundImage = `url(${afterImg.src})`;
 
         const rect = slider.getBoundingClientRect();
         const w = rect.width;
         const h = rect.height;
+        if (!w || !h) return;
 
-        if (zoom <= 1.0001 || !w || !h) {
+        if (zoom <= 1.0001) {
           zoomNavPreview.style.setProperty("--navX", "0%");
           zoomNavPreview.style.setProperty("--navY", "0%");
           zoomNavPreview.style.setProperty("--navW", "100%");
@@ -627,22 +627,24 @@
           return;
         }
 
-        const overflowX = (w * (zoom - 1)) / 2;
-        const overflowY = (h * (zoom - 1)) / 2;
-        const maxOffsetX = overflowX / zoom;
-        const maxOffsetY = overflowY / zoom;
+        const Cw = w * zoom;
+        const Ch = h * zoom;
 
-        const rX = (offsetX + maxOffsetX) / (2 * maxOffsetX); // 0..1
-        const rY = (offsetY + maxOffsetY) / (2 * maxOffsetY); // 0..1
+        // viewport left/top in content coordinates
+        const x_left = (-w / 2 - offsetX) / zoom + Cw / 2;
+        const y_top  = (-h / 2 - offsetY) / zoom + Ch / 2;
 
-        const vpW = 1 / zoom;
-        const vpH = 1 / zoom;
+        let u_left = x_left / Cw; // 0..1
+        let v_top  = y_top / Ch;
 
-        const left = rX * (1 - vpW);
-        const top  = rY * (1 - vpH);
+        const vpW = w / Cw; // 1/zoom
+        const vpH = h / Ch;
 
-        zoomNavPreview.style.setProperty("--navX", (left * 100) + "%");
-        zoomNavPreview.style.setProperty("--navY", (top * 100) + "%");
+        u_left = Math.max(0, Math.min(1 - vpW, u_left));
+        v_top  = Math.max(0, Math.min(1 - vpH, v_top));
+
+        zoomNavPreview.style.setProperty("--navX", (u_left * 100) + "%");
+        zoomNavPreview.style.setProperty("--navY", (v_top * 100) + "%");
         zoomNavPreview.style.setProperty("--navW", (vpW * 100) + "%");
         zoomNavPreview.style.setProperty("--navH", (vpH * 100) + "%");
       }
@@ -662,7 +664,7 @@
           e.preventDefault();
           slider.classList.add("is-zooming");
 
-          const delta = -e.deltaY * 0.0015; // sensitivity
+          const delta = -e.deltaY * 0.0015;
           zoom += delta;
           zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
 
@@ -685,11 +687,10 @@
       let panBaseY         = 0;
 
       slider.addEventListener("pointerdown", (e) => {
-        // Only respond to left-button presses
-        if (e.button !== 0) return;
+        if (e.button !== 0) return; // only left button
 
-        // Ctrl + left => pan
         if (e.ctrlKey) {
+          // Pan
           isPanning = true;
           slider.classList.add("is-panning");
           panStartX = e.clientX;
@@ -697,7 +698,7 @@
           panBaseX  = offsetX;
           panBaseY  = offsetY;
         } else {
-          // Plain left => reveal slider
+          // Reveal
           isDraggingReveal = true;
           slider.classList.add("is-dragging");
           revealPercent = clientXToPercent(e.clientX);
@@ -764,7 +765,7 @@
         }
       }
 
-      // Apply labels from imageSets
+      // Apply labels for dropdown from imageSets
       Array.from(setSelect.options).forEach((opt, i) => {
         if (imageSets[i]?.label) opt.textContent = imageSets[i].label;
       });
