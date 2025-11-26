@@ -10,7 +10,7 @@
     body {
         margin: 0;
         font-family: system-ui, sans-serif;
-        background: #eef1f5;
+        background: linear-gradient(135deg, #f8f1f6, #e9eff8); /* lighter pinkish-blueish */
         color: #111;
         overflow: hidden; /* Hide page during loader */
     }
@@ -434,7 +434,7 @@ function typeMessage(text, callback) {
             clearInterval(intv);
             setTimeout(callback, 700);
         }
-    }, 40);
+    }, 80);
 }
 
 function cycleMessages() {
