@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zoomable Before / After Viewer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, #dbeafe 0, transparent 50%),
+        radial-gradient(circle at bottom right, #fee2e2 0, transparent 55%),
+        #f3f4f6;
+      color: #111827;
+    }
+
+    .frame {
+      width: min(80vw, 1050px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px 18px 16px;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.12),
+        0 0 0 1px rgba(148, 163, 184, 0.3);
+    }
+
+    .frame-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #4b5563;
+      gap: 12px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .frame-title {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #111827;
+    }
+
+    .frame-meta {
+      opacity: 0.8;
+      font-size: 0.78rem;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .header-right label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .set-select {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      font-size: 0.8rem;
+      background: #f9fafb;
+      color: #111827;
+      outline: none;
+    }
+
+    /* -------- Body layout (thumbs | main slider | zoom nav) -------- */
+
+    .frame-body {
+      display: flex;
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .thumbs-column {
+      width: 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .thumbs-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 2px;
+    }
+
+    .thumbs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .thumb-btn {
+      border: none;
+      padding: 0;
+      margin: 0;
+      background: none;
+      cursor: pointer;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      outline: none;
+      box-shadow:
+        0 6px 14px rgba(15, 23, 42, 0.25),
+        0 0 0 1px rgba(148, 163, 184, 0.4);
+      transition: box-shadow 0.18s ease-out, transform 0.18s ease-out;
+    }
+
+    .thumb-btn img {
+      display: block;
+      width: 100%;
+      height: 62px;
+      object-fit: cover;
+      filter: brightness(0.85);
+      transition: transform 0.18s ease-out, filter 0.18s ease-out;
+    }
+
+    .thumb-btn:hover img {
+      filter: brightness(1);
+      transform: scale(1.04);
+    }
+
+    .thumb-btn-active {
+      box-shadow:
+        0 0 0 2px rgba(129, 140, 248, 0.9),
+        0 8px 18px rgba(15, 23, 42, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .thumb-btn-active img {
+      filter: brightness(1);
+      transform: scale(1.05);
+    }
+
+    .thumb-label-chip {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.72);
+      color: #f9fafb;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    /* --- CORE COMPARISON SHELL --- */
+
+    .comparison-shell {
+      flex: 1;
+      min-width: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid rgba(209, 213, 219, 0.9);
+      position: relative;
+    }
+
+    .comparison-slider {
+      --percent: 50;   /* 0 = full BEFORE, 100 = full AFTER */
+      --alpha: 0.5;    /* opacity of BEFORE image */
+      --zoom: 1;       /* 1 = 100%, 3 = 300% */
+      --offsetX: 0px;  /* pan X */
+      --offsetY: 0px;  /* pan Y */
+
+      position: relative;
+      width: 100%;
+      touch-action: none;
+      user-select: none;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .comparison-inner {
+      position: relative;
+      transform:
+        translate(var(--offsetX), var(--offsetY))
+        scale(var(--zoom));
+      transform-origin: center center;
+      transition: transform 0.16s ease-out;
+    }
+
+    .comparison-slider.is-panning .comparison-inner,
+    .comparison-slider.is-zooming .comparison-inner {
+      transition: none;
+    }
+
+    .comparison-after {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .comparison-before-wrapper {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .comparison-before {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: var(--alpha);
+      transition: opacity 0.16s ease-out;
+    }
+
+    .comparison-slider.is-dragging .comparison-before {
+      transition: none;
+    }
+
+    /* Handle (outside zoom transform) */
+
+    .comparison-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(var(--percent) * 1%);
+      transform: translateX(-50%);
+      pointer-events: none;
+      transition: left 0.16s ease-out;
+      z-index: 2;
+    }
+
+    .comparison-slider.is-dragging .comparison-handle {
+      transition: none;
+    }
+
+    .comparison-handle-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(
+        to bottom,
+        rgba(249, 250, 251, 0.98),
+        rgba(156, 163, 175, 0.98),
+        rgba(249, 250, 251, 0.98)
+      );
+      box-shadow: 0 0 10px rgba(15, 23, 42, 0.4);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .comparison-handle-knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #f9fafb, #e5e7eb);
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.8),
+        0 10px 18px rgba(15, 23, 42, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .comparison-handle-knob::before,
+    .comparison-handle-knob::after {
+      content: "";
+      display: block;
+      width: 6px;
+      height: 10px;
+      border-radius: 999px;
+      background: #111827;
+      margin: 0 2px;
+    }
+
+    /* Labels (flipped: AFTER on left, BEFORE on right) */
+
+    .comparison-label {
+      position: absolute;
+      top: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(209, 213, 219, 0.7);
+      z-index: 3;
+    }
+
+    .comparison-label-after {
+      left: 10px;
+      background: linear-gradient(120deg, #dbeafe, #bfdbfe);
+      color: #1e3a8a;
+    }
+
+    .comparison-label-before {
+      right: 10px;
+      background: linear-gradient(120deg, #fee2e2, #fecaca);
+      color: #7f1d1d;
+    }
+
+    /* -------- Zoom navigation (mini-map) -------- */
+
+    .zoom-nav {
+      width: 130px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .zoom-nav-title {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 500;
+      color: #9ca3af;
+    }
+
+    .zoom-nav-preview {
+      --navX: 0%;
+      --navY: 0%;
+      --navW: 100%;
+      --navH: 100%;
+
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f3f4f6;
+      background-size: cover;
+      background-position: center;
+      box-shadow:
+        0 6px 14px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(209, 213, 219, 0.9);
+    }
+
+    .zoom-nav-viewport {
+      position: absolute;
+      left: var(--navX);
+      top: var(--navY);
+      width: var(--navW);
+      height: var(--navH);
+      border-radius: 8px;
+      border: 2px solid rgba(59, 130, 246, 0.95);
+      background: rgba(239, 246, 255, 0.12);
+      box-shadow:
+        0 0 0 1px rgba(191, 219, 254, 0.7),
+        0 0 10px rgba(15, 23, 42, 0.45);
+      pointer-events: none;
+    }
+
+    .zoom-nav-hint {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      line-height: 1.3;
+    }
+
+    @media (max-width: 900px) {
+      .frame-body {
+        flex-direction: column;
+      }
+
+      .thumbs-column {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .thumbs-title {
+        margin-right: 8px;
+        margin-bottom: 0;
+      }
+
+      .thumbs-list {
+        flex-direction: row;
+      }
+
+      .thumb-btn img {
+        height: 54px;
+      }
+
+      .zoom-nav {
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+      }
+
+      .zoom-nav-preview {
+        width: 96px;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .frame {
+        padding: 14px 12px 10px;
+      }
+
+      .comparison-handle-knob {
+        width: 26px;
+        height: 26px;
+      }
+
+      .header-right label {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="frame-header">
+      <div class="header-left">
+        <div class="frame-title">Before / After</div>
+        <div class="frame-meta">
+          Left-drag to reveal • Scroll to zoom • Ctrl + Left-drag to pan
+        </div>
+      </div>
+
+      <div class="header-right">
+        <label for="imageSetSelect">Set</label>
+        <select id="imageSetSelect" class="set-select">
+          <option value="0">Set 1</option>
+          <option value="1">Set 2</option>
+          <option value="2">Set 3</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="frame-body">
+      <!-- Thumbnails column -->
+      <div class="thumbs-column">
+        <div class="thumbs-title">Sets</div>
+        <div class="thumbs-list" id="thumbList"></div>
+      </div>
+
+      <!-- Main comparison area -->
+      <div class="comparison-shell">
+        <div class="comparison-slider" id="comparisonSlider">
+          <div class="comparison-inner" id="comparisonInner">
+            <!-- AFTER image (base) -->
+            <img
+              src="after.jpg"
+              alt="After"
+              class="comparison-after"
+              id="imgAfter"
+              draggable="false"
+            />
+
+            <!-- BEFORE image (overlay, opacity-based) -->
+            <div class="comparison-before-wrapper">
+              <img
+                src="before.jpg"
+                alt="Before"
+                class="comparison-before"
+                id="imgBefore"
+                draggable="false"
+              />
+            </div>
+
+            <!-- Flipped labels: AFTER on left, BEFORE on right -->
+            <div class="comparison-label comparison-label-after">After</div>
+            <div class="comparison-label comparison-label-before">Before</div>
+          </div>
+
+          <!-- Slider handle (not scaled by zoom) -->
+          <div class="comparison-handle">
+            <div class="comparison-handle-line"></div>
+            <div class="comparison-handle-knob"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zoom navigation mini-map -->
+      <div class="zoom-nav">
+        <div class="zoom-nav-title">Zoom map</div>
+        <div class="zoom-nav-preview" id="zoomNavPreview">
+          <div class="zoom-nav-viewport"></div>
+        </div>
+        <div class="zoom-nav-hint">
+          Scroll to zoom<br>Ctrl + drag to move
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      /* -------- Image sets (edit to match your folder) -------- */
+      const imageSets = [
+        { label: "Set 1", before: "before.jpg",  after: "after.jpg"  },
+        { label: "Set 2", before: "before1.jpg", after: "after1.jpg" },
+        { label: "Set 3", before: "before2.jpg", after: "after2.jpg" },
+      ];
+
+      const slider    = document.getElementById("comparisonSlider");
+      const beforeImg = document.getElementById("imgBefore");
+      const afterImg  = document.getElementById("imgAfter");
+      const setSelect = document.getElementById("imageSetSelect");
+      const thumbList = document.getElementById("thumbList");
+      const zoomNavPreview = document.getElementById("zoomNavPreview");
+
+      /* -------- Build thumbnail buttons from imageSets -------- */
+      imageSets.forEach((set, index) => {
+        const btn = document.createElement("button");
+        btn.className = "thumb-btn";
+        btn.dataset.index = index;
+
+        const img = document.createElement("img");
+        img.src = set.after; // use AFTER as preview
+        img.alt = set.label || `Set ${index + 1}`;
+        btn.appendChild(img);
+
+        const chip = document.createElement("span");
+        chip.className = "thumb-label-chip";
+        chip.textContent = set.label || `Set ${index + 1}`;
+        btn.appendChild(chip);
+
+        btn.addEventListener("click", () => {
+          loadSet(index);
+          setSelect.value = String(index);
+          setActiveThumb(index);
+        });
+
+        thumbList.appendChild(btn);
+      });
+
+      function setActiveThumb(activeIndex) {
+        [...thumbList.querySelectorAll(".thumb-btn")].forEach((btn, i) => {
+          btn.classList.toggle("thumb-btn-active", i === activeIndex);
+        });
+      }
+
+      /* -------- Reveal (0..100) -------- */
+      let revealPercent = 50;
+
+      function applyReveal() {
+        revealPercent = Math.max(0, Math.min(100, revealPercent));
+        const alpha = 1 - revealPercent / 100;
+        slider.style.setProperty("--percent", revealPercent);
+        slider.style.setProperty("--alpha", alpha);
+      }
+
+      function clientXToPercent(clientX) {
+        const rect = slider.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const percent = (x / rect.width) * 100;
+        return Math.max(0, Math.min(100, percent));
+      }
+
+      /* -------- Zoom & Pan state -------- */
+      const MIN_ZOOM = 1.0;
+      const MAX_ZOOM = 3.0;
+      let zoom    = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      function clampOffsets() {
+        const rect = slider.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        const overflowX = (w * (zoom - 1)) / 2;
+        const overflowY = (h * (zoom - 1)) / 2;
+
+        const maxOffsetX = overflowX / zoom || 0;
+        const maxOffsetY = overflowY / zoom || 0;
+
+        offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
+        offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
+      }
+
+      function updateNavBox() {
+        if (!zoomNavPreview) return;
+
+        // set background to AFTER image
+        zoomNavPreview.style.backgroundImage = `url(${afterImg.src})`;
+
+        const rect = slider.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        if (zoom <= 1.0001 || !w || !h) {
+          zoomNavPreview.style.setProperty("--navX", "0%");
+          zoomNavPreview.style.setProperty("--navY", "0%");
+          zoomNavPreview.style.setProperty("--navW", "100%");
+          zoomNavPreview.style.setProperty("--navH", "100%");
+          return;
+        }
+
+        const overflowX = (w * (zoom - 1)) / 2;
+        const overflowY = (h * (zoom - 1)) / 2;
+        const maxOffsetX = overflowX / zoom;
+        const maxOffsetY = overflowY / zoom;
+
+        const rX = (offsetX + maxOffsetX) / (2 * maxOffsetX); // 0..1
+        const rY = (offsetY + maxOffsetY) / (2 * maxOffsetY); // 0..1
+
+        const vpW = 1 / zoom;
+        const vpH = 1 / zoom;
+
+        const left = rX * (1 - vpW);
+        const top  = rY * (1 - vpH);
+
+        zoomNavPreview.style.setProperty("--navX", (left * 100) + "%");
+        zoomNavPreview.style.setProperty("--navY", (top * 100) + "%");
+        zoomNavPreview.style.setProperty("--navW", (vpW * 100) + "%");
+        zoomNavPreview.style.setProperty("--navH", (vpH * 100) + "%");
+      }
+
+      function applyTransform() {
+        clampOffsets();
+        slider.style.setProperty("--zoom", zoom);
+        slider.style.setProperty("--offsetX", offsetX + "px");
+        slider.style.setProperty("--offsetY", offsetY + "px");
+        updateNavBox();
+      }
+
+      // Zoom with mouse wheel
+      slider.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          slider.classList.add("is-zooming");
+
+          const delta = -e.deltaY * 0.0015; // sensitivity
+          zoom += delta;
+          zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+
+          applyTransform();
+
+          clearTimeout(slider._wheelTimeout);
+          slider._wheelTimeout = setTimeout(() => {
+            slider.classList.remove("is-zooming");
+          }, 150);
+        },
+        { passive: false }
+      );
+
+      /* -------- Drag logic (Left = reveal, Ctrl+Left = pan) -------- */
+      let isDraggingReveal = false;
+      let isPanning        = false;
+      let panStartX        = 0;
+      let panStartY        = 0;
+      let panBaseX         = 0;
+      let panBaseY         = 0;
+
+      slider.addEventListener("pointerdown", (e) => {
+        // Only respond to left-button presses
+        if (e.button !== 0) return;
+
+        // Ctrl + left => pan
+        if (e.ctrlKey) {
+          isPanning = true;
+          slider.classList.add("is-panning");
+          panStartX = e.clientX;
+          panStartY = e.clientY;
+          panBaseX  = offsetX;
+          panBaseY  = offsetY;
+        } else {
+          // Plain left => reveal slider
+          isDraggingReveal = true;
+          slider.classList.add("is-dragging");
+          revealPercent = clientXToPercent(e.clientX);
+          applyReveal();
+        }
+
+        slider.setPointerCapture(e.pointerId);
+      });
+
+      slider.addEventListener("pointermove", (e) => {
+        if (isDraggingReveal && (e.buttons & 1)) {
+          revealPercent = clientXToPercent(e.clientX);
+          applyReveal();
+        }
+
+        if (isPanning && (e.buttons & 1)) {
+          const dx = e.clientX - panStartX;
+          const dy = e.clientY - panStartY;
+          offsetX = panBaseX + dx;
+          offsetY = panBaseY + dy;
+          applyTransform();
+        }
+      });
+
+      function endPointer(e) {
+        isDraggingReveal = false;
+        isPanning = false;
+        slider.classList.remove("is-dragging", "is-panning");
+        try {
+          slider.releasePointerCapture(e.pointerId);
+        } catch {}
+      }
+
+      slider.addEventListener("pointerup", endPointer);
+      slider.addEventListener("pointercancel", endPointer);
+      slider.addEventListener("pointerleave", () => {
+        isDraggingReveal = false;
+        isPanning = false;
+        slider.classList.remove("is-dragging", "is-panning");
+      });
+
+      /* -------- Image set switching -------- */
+      function loadSet(index) {
+        const set = imageSets[index] || imageSets[0];
+        beforeImg.src = set.before;
+        afterImg.src  = set.after;
+
+        revealPercent = 50;
+        zoom = 1;
+        offsetX = 0;
+        offsetY = 0;
+
+        applyReveal();
+
+        const ensureLayout = () => {
+          applyTransform();
+          updateNavBox();
+        };
+
+        if (afterImg.complete) {
+          ensureLayout();
+        } else {
+          afterImg.onload = ensureLayout;
+        }
+      }
+
+      // Apply labels from imageSets
+      Array.from(setSelect.options).forEach((opt, i) => {
+        if (imageSets[i]?.label) opt.textContent = imageSets[i].label;
+      });
+
+      setSelect.addEventListener("change", (e) => {
+        const idx = parseInt(e.target.value, 10);
+        loadSet(idx);
+        setActiveThumb(idx);
+      });
+
+      /* -------- Init -------- */
+      applyReveal();
+      applyTransform();
+      loadSet(0);
+      setActiveThumb(0);
+    })();
+  </script>
+</body>
+</html>
