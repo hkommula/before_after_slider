@@ -1,0 +1,47 @@
+name: Generate image sets manifest
+
+on:
+  push:
+    branches:
+      - main    # or your default branch
+    paths:
+      - "images/**"
+      - ".github/workflows/generate-sets.yml"
+      - "scripts/generate-sets.mjs"
+  workflow_dispatch: {}  # allow manual runs from the Actions tab
+
+permissions:
+  contents: write   # needed so the workflow can push commits
+
+jobs:
+  generate-sets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate sets.json
+        run: |
+          node scripts/generate-sets.mjs
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add images/sets.json
+          git commit -m "chore: update image sets manifest"
+          git push
