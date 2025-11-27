@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Before / After Viewer</title>
+<title>Before / After Viewer – ArcGIS Swipe Style</title>
 
 <style>
     * { box-sizing: border-box; }
@@ -10,9 +10,61 @@
     body {
         margin: 0;
         font-family: system-ui, sans-serif;
-        background: linear-gradient(135deg, #f8f1f6, #d7e9ff); /* lighter pinkish-blueish */
+        /* Light blue / pink page-liner gradient */
+        background: linear-gradient(135deg, #dbeafe, #fce7f3);
         color: #111;
-        overflow: hidden; /* Hide page during loader */
+        overflow: hidden;
+    }
+
+    #app {
+        opacity: 0;
+        transition: opacity 0.6s ease-out;
+        padding: 16px;
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .frame {
+        width: min(96vw, 1600px);
+        height: min(94vh, 960px);
+        margin: auto;
+        padding: 18px 18px 20px;
+        background: #ffffffee;
+        border-radius: 18px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.15);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .frame-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 4px;
+    }
+
+    .frame-title {
+        font-size: 1.1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .frame-meta {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .frame-body {
+        flex: 1;
+        display: flex;
+        gap: 16px;
+        min-height: 0;
     }
 
     /* =========================================================
@@ -61,56 +113,6 @@
     }
 
     /* =========================================================
-       MAIN UI LAYOUT
-    ==========================================================*/
-
-    #app {
-        opacity: 0;
-        transition: opacity 0.6s ease-out;
-        padding: 24px;
-        overflow: auto;
-        height: 100vh;
-        justify-content: center;
-        align-items: center;
-        display: flex;
-    }
-
-    .frame {
-        width: min(80vw, 1100px);
-        margin: auto;
-        padding: 20px;
-        background: #ffffff;
-        border-radius: 18px;
-        box-shadow: 0 16px 40px rgba(0,0,0,0.08);
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-    }
-
-    .frame-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .frame-title {
-        font-size: 1.1rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-weight: 600;
-    }
-
-    .frame-meta {
-        font-size: 0.85rem;
-        color: #6b7280;
-    }
-
-    .frame-body {
-        display: flex;
-        gap: 16px;
-    }
-
-    /* =========================================================
        THUMBNAILS
     ==========================================================*/
 
@@ -118,17 +120,27 @@
         width: 90px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
+        /* NEW — centers the entire column vertically */
+        margin-top: auto;
+        margin-bottom: auto;
+
+        overflow-y: visible;
+        padding-right: 2px;
     }
 
+    /* Thumbnail container */
     .thumb-btn {
-        border: none;
-        background: none;
-        border-radius: 10px;
-        overflow: hidden;
+        position: relative;
+        overflow: hidden;           /* required for zoom effect */
+        border-radius: 12px;
+        width: 100%;
+        height: 60px;               /* or whatever your thumbnail height is */
+        padding: 0;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-        transition: transform 0.15s;
+        background: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        transition: transform 0.2s ease;
     }
 
     .thumb-btn img {
@@ -138,67 +150,51 @@
         filter: brightness(0.85);
     }
 
+    .thumb-label {
+        position: absolute;
+        inset: 0;                    /* cover entire thumbnail */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        text-align: center;
+
+        background: rgba(0,0,0,0.5); /* 50% transparency overlay */
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 500;
+
+        opacity: 0;                  /* hidden by default */
+        transition: opacity 0.25s ease;
+
+        pointer-events: none;        /* so hover stays responsive */
+        border-radius: 10px;         /* match thumbnail */
+        white-space: normal;         /* allow wrapping */
+        word-break: break-word;
+    }
+
     .thumb-btn:hover img {
         filter: brightness(1);
         transform: scale(1.04);
     }
 
+    .thumb-btn:hover .thumb-label {
+        opacity: 1;                  /* fade-in on hover */
+    }
+
+    /* Active thumbnail (clean glow highlight) */
     .thumb-btn-active {
-        outline: 2px solid #3b82f6;
+        outline: none;
+        box-shadow:
+            0 0 0 3px rgba(108, 116, 231, 0.35),
+            0 4px 14px rgba(64, 155, 150, 0.2);
+        border-radius: 12px;
         transform: translateY(-2px);
     }
 
-    .thumbs-column {
-        width: 90px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .thumb-btn {
-        position: relative;              /* NEW: so the label can overlay */
-        border: none;
-        background: none;
-        border-radius: 10px;
-        overflow: hidden;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-        transition: transform 0.15s;
-    }
-
-    .thumb-btn img {
-        width: 100%;
-        height: 60px;
-        object-fit: cover;
-        filter: brightness(0.85);
-    }
-
-    /* NEW: small "Set X" label on each thumbnail */
-    .thumb-label {
-        position: absolute;
-        left: 50%;
-        bottom: 4px;
-        transform: translateX(-50%);
-        padding: 1px 6px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        letter-spacing: 0.4px;
-        font-weight: 600;
-        font-family: "Inter", "Roboto Condensed", "Helvetica Neue", sans-serif;
-        background: rgba(0, 0, 0, 0.15); /* dark, semi-transparent */
-        color: #f9fafb;
-        pointer-events: none;
-        backdrop-filter: blur(2px);
-    }
-
-    .thumb-btn:hover img {
-        filter: brightness(1);
-        transform: scale(1.04);
-    }
-
-
+    
     /* =========================================================
-       COMPARISON SLIDER
+       SWIPE + ZOOM + PAN
     ==========================================================*/
 
     .comparison-shell {
@@ -207,56 +203,67 @@
         overflow: hidden;
         background: #000;
         position: relative;
+        min-width: 0;
+        min-height: 0;
     }
 
     .comparison-slider {
-        --percent: 50;
-        --alpha: 0.5;
-        --zoom: 1;
-        --offsetX: 0px;
-        --offsetY: 0px;
+        --percent: 50;      /* swipe fraction from left (0–100) */
+        --zoom: 1;          /* zoom factor */
+        --offsetX: 0px;     /* pan X in px */
+        --offsetY: 0px;     /* pan Y in px */
 
+        position: relative;
         width: 100%;
         height: 100%;
-        position: relative;
         user-select: none;
+        touch-action: pan-y;
+        overflow: hidden;
+        background: #000;
+    }
+
+    /* Viewport wrapper (no transform anymore) */
+    .comparison-viewport {
+        position: absolute;
+        inset: 0;
+    }
+
+    .comparison-layer {
+        position: absolute;
+        inset: 0;
         overflow: hidden;
     }
 
-    .comparison-inner {
-        width: 100%;
-        height: 100%;
-        transform: translate(var(--offsetX), var(--offsetY)) scale(var(--zoom));
-        transform-origin: center;
-        transition: transform 0.15s ease-out;
-    }
-
-    .comparison-after {
-        width: 100%;
-        display: block;
-        pointer-events: none;
-    }
-
-    .comparison-before-wrapper {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-    }
-
-    .comparison-before {
+    /* 🔑 Zoom & pan are applied directly to images,
+       so both layers move identically under the swipe line. */
+    .comparison-layer img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        opacity: var(--alpha);
+        display: block;
+        pointer-events: none;
+        transform: translate(var(--offsetX), var(--offsetY)) scale(var(--zoom));
+        transform-origin: center center;
     }
 
-    /* Handle */
+    .comparison-base {
+        z-index: 1;
+    }
+
+    /* Overlay is full-size; we clip it horizontally for swipe */
+    .comparison-overlay {
+        z-index: 2;
+        clip-path: inset(0 calc(100% - var(--percent) * 1%) 0 0);
+    }
+
+    /* Handle (vertical bar) */
     .comparison-handle {
         position: absolute;
         top: 0;
         bottom: 0;
         left: calc(var(--percent) * 1%);
         transform: translateX(-50%);
+        z-index: 3;
         pointer-events: none;
     }
 
@@ -288,17 +295,15 @@
         font-size: 0.75rem;
         font-weight: 600;
         backdrop-filter: blur(6px);
-        z-index: 3;
-        overflow: hidden;              /* so the fill stays inside the pill */
+        z-index: 4;
+        overflow: hidden;
     }
 
-    /* text sits above fill */
     .comparison-label .label-text {
         position: relative;
         z-index: 2;
     }
 
-    /* generic fill background */
     .comparison-label::before {
         content: "";
         position: absolute;
@@ -308,7 +313,6 @@
         pointer-events: none;
     }
 
-    /* After label – stays in place, fills from the left */
     .comparison-label-after {
         left: 8px;
         background: #dbeafe;
@@ -317,11 +321,10 @@
 
     .comparison-label-after::before {
         left: 0;
-        width: var(--afterFill, 50%);
-        background: rgba(37, 99, 235, 0.10); /* darker blue fill */
+        width: 100%;
+        background: rgba(37, 99, 235, 0.10);
     }
 
-    /* Before label – stays in place, fills from the right */
     .comparison-label-before {
         right: 8px;
         background: #fee2e2;
@@ -330,34 +333,109 @@
 
     .comparison-label-before::before {
         right: 0;
-        width: var(--beforeFill, 50%);
-        background: rgba(220, 38, 38, 0.10); /* darker red fill */
+        width: 100%;
+        background: rgba(220, 38, 38, 0.10);
     }
+
+    /* Frosted translucent pill */
+    .comparison-label {
+        position: absolute;
+        top: 8px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.4);   /* softer, cleaner */
+        z-index: 4;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    /* Main label text */
+    .label-text {
+        position: relative;
+        z-index: 3;
+        color: #1f2937;        /* soft grey */
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Smaller descriptor text */
+    .label-text .subtext {
+        font-size: 0.65rem;     /* slightly smaller */
+        opacity: 0.75;          /* softer */
+        font-weight: 500;
+    }
+
+    /* Make (After) / (Before) bold but same size */
+    .label-text strong {
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    /* Fill layer (very subtle tint) */
+    .label-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0%;
+        z-index: 1;
+        pointer-events: none;
+        transition: width 0.14s ease-out;
+        opacity: 0.35;                   /* WAY softer */
+        mix-blend-mode: multiply;        /* blends into label naturally */
+    }
+
+    /* AFTER — cool subtle tint */
+    .label-fill-after {
+        left: 0;
+        background: linear-gradient(
+            90deg,
+            rgba(96,165,250,0.45),       /* soft blue */
+            rgba(8, 76, 224, 0.45)
+        );
+    }
+
+    /* BEFORE — warm subtle tint */
+    .label-fill-before {
+        right: 0;
+        background: linear-gradient(
+            270deg,
+            rgba(248, 185, 113, 0.45),      /* soft red */
+            rgba(245, 40, 40, 0.45)
+        );
+    }
+
+    /* Label placement */
+    .comparison-label-after { left: 8px; }
+    .comparison-label-before { right: 8px; }
+
 
 </style>
 </head>
 
 <body>
 
-<!-- =========================================================
-     LOADER SCREEN
-========================================================== -->
+<!-- LOADER -->
 <div id="loaderScreen">
     <div class="spinner"></div>
     <div class="loadingText" id="loadingText"></div>
 </div>
 
-<!-- =========================================================
-     MAIN APP
-========================================================== -->
+<!-- MAIN APP -->
 <div id="app">
     <div class="frame">
-
         <div class="frame-header">
             <div>
                 <div class="frame-title">Before / After Viewer</div>
                 <div class="frame-meta">
-                    Left-drag to reveal • Scroll to zoom • Ctrl + Left-drag to pan
+                    Drag to swipe • Ctrl + drag to pan • Mouse wheel to zoom
                 </div>
             </div>
 
@@ -365,51 +443,52 @@
                 <option value="0">Set 1</option>
                 <option value="1">Set 2</option>
             </select>
+
         </div>
 
         <div class="frame-body">
-
-            <!-- Thumbnails -->
             <div class="thumbs-column" id="thumbList"></div>
 
-            <!-- Comparison viewer -->
             <div class="comparison-shell">
                 <div class="comparison-slider" id="comparisonSlider">
+                    <div class="comparison-viewport" id="comparisonViewport">
+                        <!-- Base (bottom) layer -->
+                        <div class="comparison-layer comparison-base">
+                            <img src="before.jpg" id="imgBase" draggable="false" alt="Base layer">
+                        </div>
 
-                    <div class="comparison-inner" id="comparisonInner">
-                        <img src="after.jpg" id="imgAfter" class="comparison-after" draggable="false">
-                        <div class="comparison-before-wrapper">
-                            <img src="before.jpg" id="imgBefore" class="comparison-before" draggable="false">
+                        <!-- Overlay (swiped) layer -->
+                        <div class="comparison-layer comparison-overlay" id="overlayLayer">
+                            <img src="after.jpg" id="imgOverlay" draggable="false" alt="Overlay layer">
                         </div>
                     </div>
 
+                    <!-- Labels -->
                     <div class="comparison-label comparison-label-after">
-                        <span class="label-text">
-                            After <span style="opacity:0.65; font-size:0.75em;">(Top Image)</span>
-                        </span>
+                        <div class="label-fill label-fill-after" id="afterFill"></div>
+                        <span class="label-text"><strong>(After)</strong> <span class="subtext">Top Image</span></span>
                     </div>
 
                     <div class="comparison-label comparison-label-before">
-                        <span class="label-text">
-                            Before <span style="opacity:0.65; font-size:0.75em;">(Bottom Image)</span>
-                        </span>
+                        <div class="label-fill label-fill-before" id="beforeFill"></div>
+                        <span class="label-text"><strong>(Before)</strong> <span class="subtext">Bottom Image</span></span>
                     </div>
 
+
+                    <!-- Handle -->
                     <div class="comparison-handle">
                         <div class="comparison-handle-line"></div>
                         <div class="comparison-handle-knob"></div>
                     </div>
                 </div>
             </div>
-
         </div>
-
     </div>
 </div>
 
 <script>
 /* =========================================================
-   LOADER FUNNY RANDOM TYPING MESSAGES
+   LOADER MESSAGES
 ========================================================= */
 
 const funnyMessages = [
@@ -441,155 +520,171 @@ function cycleMessages() {
     const randomMsg = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
     typeMessage(randomMsg, cycleMessages);
 }
-
 cycleMessages();
 
-/* Simulate loading */
 window.addEventListener("load", () => {
     setTimeout(() => {
-        document.body.style.overflow = "auto";
+        document.body.style.overflow = "hidden";
         document.getElementById("loaderScreen").style.display = "none";
         document.getElementById("app").style.opacity = 1;
     }, 1500);
 });
 
-
 /* =========================================================
-   IMAGE VIEWER LOGIC (NOW DRIVEN BY sets.json)
+   IMAGE SETS + THUMBNAILS
 ========================================================= */
 
-let imageSets = []; // will be loaded from images/sets.json
+let imageSets = [];
 
-const slider    = document.getElementById("comparisonSlider");
-const inner     = document.getElementById("comparisonInner");
-const beforeImg = document.getElementById("imgBefore");
-const afterImg  = document.getElementById("imgAfter");
-const thumbList = document.getElementById("thumbList");
-const setSelect = document.getElementById("imageSetSelect");
+const sliderEl   = document.getElementById("comparisonSlider");
+const baseImg    = document.getElementById("imgBase");
+const overlayImg = document.getElementById("imgOverlay");
+const thumbList  = document.getElementById("thumbList");
+const setSelect  = document.getElementById("imageSetSelect");
+const afterFillEl  = document.getElementById("afterFill");
+const beforeFillEl = document.getElementById("beforeFill");
 
-let zoom = 1;
+
+let swipePercent = 50; // 0–100
+
+function setSwipePercent(percent) {
+    swipePercent = Math.max(0, Math.min(100, percent));
+    sliderEl.style.setProperty("--percent", swipePercent);
+
+    // update fill bars
+    afterFillEl.style.width  = swipePercent + "%";
+    beforeFillEl.style.width = (100 - swipePercent) + "%";
+}
+
+function clientXToPercent(clientX) {
+    const rect = sliderEl.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const frac = x / rect.width;
+    return frac * 100;
+}
+
+/* =========================================================
+   ZOOM + PAN STATE
+========================================================= */
+
+let zoom    = 1;
+const minZoom = 1;
+const maxZoom = 5;
 let offsetX = 0;
 let offsetY = 0;
-let revealPercent = 50;
-
-/* ======== Reveal / blend logic ======== */
-
-function applyReveal() {
-    revealPercent = Math.max(0, Math.min(100, revealPercent));
-
-    const alpha = 1 - revealPercent / 100;
-
-    slider.style.setProperty("--percent", revealPercent);
-    slider.style.setProperty("--alpha", alpha);
-
-    const afterFraction = revealPercent / 100;
-    const beforeFraction = alpha;
-
-    slider.style.setProperty("--afterFill", (afterFraction * 100) + "%");
-    slider.style.setProperty("--beforeFill", (beforeFraction * 100) + "%");
-}
-
-function clientXToPercent(x) {
-    const rect = slider.getBoundingClientRect();
-    return Math.min(100, Math.max(0, ((x - rect.left) / rect.width) * 100));
-}
-
-/* ======== Zoom / Pan logic ======== */
 
 function clampPan() {
-    const rect = slider.getBoundingClientRect();
+    const rect = sliderEl.getBoundingClientRect();
     const w = rect.width;
     const h = rect.height;
 
     const zoomedW = w * zoom;
     const zoomedH = h * zoom;
 
-    const overflowX = (zoomedW - w) / 2;
-    const overflowY = (zoomedH - h) / 2;
+    const extraX = (zoomedW - w) / 2;
+    const extraY = (zoomedH - h) / 2;
 
-    offsetX = Math.max(-overflowX, Math.min(overflowX, offsetX));
-    offsetY = Math.max(-overflowY, Math.min(overflowY, offsetY));
+    if (zoom <= 1) {
+        offsetX = 0;
+        offsetY = 0;
+        return;
+    }
+
+    offsetX = Math.max(-extraX, Math.min(extraX, offsetX));
+    offsetY = Math.max(-extraY, Math.min(extraY, offsetY));
 }
 
-function applyZoomPan() {
+function applyViewTransform() {
     clampPan();
-    slider.style.setProperty("--zoom", zoom);
-    slider.style.setProperty("--offsetX", offsetX + "px");
-    slider.style.setProperty("--offsetY", offsetY + "px");
+    sliderEl.style.setProperty("--zoom", zoom);
+    sliderEl.style.setProperty("--offsetX", offsetX + "px");
+    sliderEl.style.setProperty("--offsetY", offsetY + "px");
 }
 
-/* ======== Pointer controls ======== */
-
-let draggingReveal = false;
-let panning = false;
-let panStartX = 0, panStartY = 0;
-let panBaseX = 0, panBaseY = 0;
-
-slider.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-
-    if (e.ctrlKey) {
-        panning = true;
-        panStartX = e.clientX;
-        panStartY = e.clientY;
-        panBaseX = offsetX;
-        panBaseY = offsetY;
-    } else {
-        draggingReveal = true;
-        revealPercent = clientXToPercent(e.clientX);
-        applyReveal();
-    }
-
-    slider.setPointerCapture(e.pointerId);
-});
-
-slider.addEventListener("pointermove", (e) => {
-    if (draggingReveal && (e.buttons & 1)) {
-        revealPercent = clientXToPercent(e.clientX);
-        applyReveal();
-    }
-
-    if (panning && (e.buttons & 1)) {
-        offsetX = panBaseX + (e.clientX - panStartX);
-        offsetY = panBaseY + (e.clientY - panStartY);
-        applyZoomPan();
-    }
-});
-
-slider.addEventListener("pointerup", () => {
-    draggingReveal = false;
-    panning = false;
-});
-
-slider.addEventListener("pointerleave", () => {
-    draggingReveal = false;
-    panning = false;
-});
-
-/* ======== Scroll to zoom ======== */
-
-slider.addEventListener("wheel", (e) => {
+/* Mouse wheel zoom */
+sliderEl.addEventListener("wheel", (e) => {
     e.preventDefault();
-    zoom -= e.deltaY * 0.0015;
-    zoom = Math.max(1, Math.min(3, zoom));
-    applyZoomPan();
+    const delta = -e.deltaY * 0.0015;
+    zoom = Math.min(maxZoom, Math.max(minZoom, zoom + delta));
+    applyViewTransform();
 }, { passive: false });
 
 /* =========================================================
-   Dynamic thumbnail + select building from imageSets
+   SWIPE + PAN POINTER LOGIC
+========================================================= */
+
+let isSwiping = false;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panBaseX  = 0;
+let panBaseY  = 0;
+
+sliderEl.addEventListener("pointerdown", (e) => {
+    // Suppress context menu for easier pan on right-click if hit
+    sliderEl.addEventListener("contextmenu", evt => evt.preventDefault());
+
+    if (e.ctrlKey) {
+        // Ctrl + drag => pan
+        isPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        panBaseX  = offsetX;
+        panBaseY  = offsetY;
+        sliderEl.setPointerCapture(e.pointerId);
+        return;
+    }
+
+    if (e.button !== 0) return; // swipe is left button only
+
+    isSwiping = true;
+    sliderEl.setPointerCapture(e.pointerId);
+
+    const pct = clientXToPercent(e.clientX);
+    setSwipePercent(pct);
+});
+
+sliderEl.addEventListener("pointermove", (e) => {
+    if (isSwiping) {
+        const pct = clientXToPercent(e.clientX);
+        setSwipePercent(pct);
+    } else if (isPanning) {
+        offsetX = panBaseX + (e.clientX - panStartX);
+        offsetY = panBaseY + (e.clientY - panStartY);
+        applyViewTransform();
+    }
+});
+
+function endPointer(e) {
+    isSwiping = false;
+    isPanning = false;
+    try {
+        sliderEl.releasePointerCapture(e.pointerId);
+    } catch {}
+}
+
+sliderEl.addEventListener("pointerup", endPointer);
+sliderEl.addEventListener("pointercancel", endPointer);
+sliderEl.addEventListener("pointerleave", () => {
+    isSwiping = false;
+    isPanning = false;
+});
+
+/* =========================================================
+   THUMBNAILS / SELECT
 ========================================================= */
 
 function buildThumbnails() {
     thumbList.innerHTML = "";
     imageSets.forEach((set, i) => {
-        const b = document.createElement("button");
-        b.className = "thumb-btn";
-        b.innerHTML = `
-            <img src="${set.after}" alt="Thumbnail for set ${set.id || (i + 1)}">
+        const btn = document.createElement("button");
+        btn.className = "thumb-btn";
+        btn.innerHTML = `
+            <img src="${set.after}" alt="Thumbnail ${set.id || (i + 1)}">
             <span class="thumb-label">${set.id || ("Set " + (i + 1))}</span>
         `;
-        b.addEventListener("click", () => loadSet(i));
-        thumbList.appendChild(b);
+        btn.addEventListener("click", () => loadSet(i));
+        thumbList.appendChild(btn);
     });
 }
 
@@ -609,20 +704,23 @@ function markActive(index) {
     });
 }
 
+function resetView() {
+    zoom = 1;
+    offsetX = 0;
+    offsetY = 0;
+    applyViewTransform();
+    setSwipePercent(50);
+}
+
 function loadSet(index) {
     const set = imageSets[index];
     if (!set) return;
 
-    beforeImg.src = set.before;
-    afterImg.src  = set.after;
+    // Base = "before", Overlay = "after"
+    baseImg.src    = set.before;
+    overlayImg.src = set.after;
 
-    zoom = 1;
-    offsetX = 0;
-    offsetY = 0;
-    revealPercent = 50;
-
-    applyReveal();
-    applyZoomPan();
+    resetView();
     markActive(index);
     setSelect.value = String(index);
 }
@@ -638,7 +736,6 @@ setSelect.addEventListener("change", (e) => {
 
 async function loadImageSets() {
     try {
-        // cache-bust in case GitHub Pages aggressively caches
         const response = await fetch("images/sets.json?cacheBust=" + Date.now());
         if (!response.ok) {
             console.error("Failed to load sets.json", response.status);
@@ -659,16 +756,15 @@ async function loadImageSets() {
 
         buildThumbnails();
         buildSelect();
-        loadSet(0);  // start with the first set
+        resetView();
+        loadSet(0);
     } catch (err) {
         console.error("Error loading sets.json", err);
     }
 }
 
-// Start loading image sets once the DOM is ready
 document.addEventListener("DOMContentLoaded", loadImageSets);
 </script>
-
 
 </body>
 </html>
