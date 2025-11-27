@@ -409,10 +409,6 @@
 
 <script>
 /* =========================================================
-   LOADER FUNNY TYPING MESSAGES
-========================================================= */
-
-/* =========================================================
    LOADER FUNNY RANDOM TYPING MESSAGES
 ========================================================= */
 
@@ -459,16 +455,13 @@ window.addEventListener("load", () => {
 
 
 /* =========================================================
-   IMAGE VIEWER LOGIC
+   IMAGE VIEWER LOGIC (NOW DRIVEN BY sets.json)
 ========================================================= */
 
-const imageSets = [
-    { before: "before1.jpg", after: "after1.jpg", },
-    { before: "before2.jpg", after: "after2.jpg", },
-];
+let imageSets = []; // will be loaded from images/sets.json
 
-const slider = document.getElementById("comparisonSlider");
-const inner  = document.getElementById("comparisonInner");
+const slider    = document.getElementById("comparisonSlider");
+const inner     = document.getElementById("comparisonInner");
 const beforeImg = document.getElementById("imgBefore");
 const afterImg  = document.getElementById("imgAfter");
 const thumbList = document.getElementById("thumbList");
@@ -479,48 +472,44 @@ let offsetX = 0;
 let offsetY = 0;
 let revealPercent = 50;
 
+/* ======== Reveal / blend logic ======== */
+
 function applyReveal() {
     revealPercent = Math.max(0, Math.min(100, revealPercent));
 
-    // alpha controls how much of BEFORE is visible (your existing logic)
     const alpha = 1 - revealPercent / 100;
 
-    // existing: handle + image blend
     slider.style.setProperty("--percent", revealPercent);
     slider.style.setProperty("--alpha", alpha);
 
-    // NEW: bubble fills
-    const afterFraction = revealPercent / 100; // more slider to the right → more AFTER
-    const beforeFraction = alpha;              // same as visible BEFORE proportion
+    const afterFraction = revealPercent / 100;
+    const beforeFraction = alpha;
 
     slider.style.setProperty("--afterFill", (afterFraction * 100) + "%");
     slider.style.setProperty("--beforeFill", (beforeFraction * 100) + "%");
 }
-
 
 function clientXToPercent(x) {
     const rect = slider.getBoundingClientRect();
     return Math.min(100, Math.max(0, ((x - rect.left) / rect.width) * 100));
 }
 
+/* ======== Zoom / Pan logic ======== */
+
 function clampPan() {
     const rect = slider.getBoundingClientRect();
     const w = rect.width;
     const h = rect.height;
 
-    // Full zoomed size
     const zoomedW = w * zoom;
     const zoomedH = h * zoom;
 
-    // Overflow beyond visible frame
     const overflowX = (zoomedW - w) / 2;
     const overflowY = (zoomedH - h) / 2;
 
-    // Clamp so user can pan fully to the edges
     offsetX = Math.max(-overflowX, Math.min(overflowX, offsetX));
     offsetY = Math.max(-overflowY, Math.min(overflowY, offsetY));
 }
-
 
 function applyZoomPan() {
     clampPan();
@@ -529,7 +518,7 @@ function applyZoomPan() {
     slider.style.setProperty("--offsetY", offsetY + "px");
 }
 
-/* ========== Mouse Controls ========== */
+/* ======== Pointer controls ======== */
 
 let draggingReveal = false;
 let panning = false;
@@ -577,7 +566,7 @@ slider.addEventListener("pointerleave", () => {
     panning = false;
 });
 
-/* ========== Scroll to zoom ========== */
+/* ======== Scroll to zoom ======== */
 
 slider.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -587,20 +576,32 @@ slider.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 /* =========================================================
-   Thumbnail loading
+   Dynamic thumbnail + select building from imageSets
 ========================================================= */
 
-imageSets.forEach((s, i) => {
-    const b = document.createElement("button");
-    b.className = "thumb-btn";
-    b.innerHTML = `
-        <img src="${s.after}">
-        <span class="thumb-label">Set ${i + 1}</span>
-    `;
-    b.addEventListener("click", () => loadSet(i));
-    thumbList.appendChild(b);
-});
+function buildThumbnails() {
+    thumbList.innerHTML = "";
+    imageSets.forEach((set, i) => {
+        const b = document.createElement("button");
+        b.className = "thumb-btn";
+        b.innerHTML = `
+            <img src="${set.after}" alt="Thumbnail for set ${set.id || (i + 1)}">
+            <span class="thumb-label">${set.id || ("Set " + (i + 1))}</span>
+        `;
+        b.addEventListener("click", () => loadSet(i));
+        thumbList.appendChild(b);
+    });
+}
 
+function buildSelect() {
+    setSelect.innerHTML = "";
+    imageSets.forEach((set, i) => {
+        const opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = set.id ? set.id : `Set ${i + 1}`;
+        setSelect.appendChild(opt);
+    });
+}
 
 function markActive(index) {
     [...thumbList.children].forEach((b, i) => {
@@ -610,27 +611,64 @@ function markActive(index) {
 
 function loadSet(index) {
     const set = imageSets[index];
+    if (!set) return;
 
     beforeImg.src = set.before;
     afterImg.src  = set.after;
 
     zoom = 1;
-    offsetX = offsetY = 0;
+    offsetX = 0;
+    offsetY = 0;
     revealPercent = 50;
 
     applyReveal();
     applyZoomPan();
     markActive(index);
-    setSelect.value = index;
+    setSelect.value = String(index);
 }
 
 setSelect.addEventListener("change", (e) => {
-    loadSet(Number(e.target.value));
+    const idx = Number(e.target.value);
+    loadSet(idx);
 });
 
-/* Load initial */
-loadSet(0);
+/* =========================================================
+   Fetch sets.json and initialise viewer
+========================================================= */
+
+async function loadImageSets() {
+    try {
+        // cache-bust in case GitHub Pages aggressively caches
+        const response = await fetch("images/sets.json?cacheBust=" + Date.now());
+        if (!response.ok) {
+            console.error("Failed to load sets.json", response.status);
+            return;
+        }
+
+        const data = await response.json();
+        if (!data || !Array.isArray(data.sets)) {
+            console.error("sets.json has unexpected structure");
+            return;
+        }
+
+        imageSets = data.sets;
+        if (!imageSets.length) {
+            console.warn("No image sets found in sets.json");
+            return;
+        }
+
+        buildThumbnails();
+        buildSelect();
+        loadSet(0);  // start with the first set
+    } catch (err) {
+        console.error("Error loading sets.json", err);
+    }
+}
+
+// Start loading image sets once the DOM is ready
+document.addEventListener("DOMContentLoaded", loadImageSets);
 </script>
+
 
 </body>
 </html>
