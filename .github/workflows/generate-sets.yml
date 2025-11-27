@@ -1,0 +1,36 @@
+name: Generate image sets
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed if you want auto-commits
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies (if any)
+        run: |
+          python -m pip install --upgrade pip
+          # pip install -r requirements.txt  # if you ever need it
+
+      - name: Generate sets.json
+        run: |
+          python generate_sets.py
+
+      - name: Commit updated sets.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update generated images/sets.json"
+          file_pattern: images/sets.json
