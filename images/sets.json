@@ -1,6 +1,16 @@
 {
   "sets": [
     {
+      "id": "DEM_Editing_1",
+      "before": "images/DEM_Editing_1_before.png",
+      "after": "images/DEM_Editing_1_after.png"
+    },
+    {
+      "id": "DEM_Editing_3",
+      "before": "images/DEM_Editing_3_before.png",
+      "after": "images/DEM_Editing_3_after.png"
+    },
+    {
       "id": "Martin",
       "before": "images/Martin_before.jpg",
       "after": "images/Martin_after.jpg"
