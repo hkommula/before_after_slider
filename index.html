@@ -68,7 +68,7 @@
     }
 
     /* =========================================================
-       LOADING SCREEN
+       GLOBAL LOADING SCREEN
     ==========================================================*/
 
     #loaderScreen {
@@ -121,78 +121,76 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        /* NEW — centers the entire column vertically */
-        margin-top: auto;
+        margin-top: auto;          /* vertically center column */
         margin-bottom: auto;
-
         overflow-y: visible;
         padding-right: 2px;
     }
 
-    /* Thumbnail container */
     .thumb-btn {
         position: relative;
-        overflow: hidden;           /* required for zoom effect */
+        overflow: hidden;
         border-radius: 12px;
         width: 100%;
-        height: 60px;               /* or whatever your thumbnail height is */
+        height: 60px;
         padding: 0;
         cursor: pointer;
         background: none;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
         transition: transform 0.2s ease;
     }
 
+    /* Thumbnail image fits container; zooms 10% on hover */
     .thumb-btn img {
         width: 100%;
-        height: 60px;
+        height: 100%;
         object-fit: cover;
-        filter: brightness(0.85);
+        transform: scale(1);
+        transition: transform 0.25s ease-out;
+        display: block;
+        border-radius: 12px;
     }
 
+    .thumb-btn:hover img {
+        transform: scale(1.10); /* 10% zoom */
+    }
+
+    /* Hover-only label overlay */
     .thumb-label {
         position: absolute;
-        inset: 0;                    /* cover entire thumbnail */
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 4px;
         text-align: center;
-
-        background: rgba(0,0,0,0.5); /* 50% transparency overlay */
+        background: rgba(0,0,0,0.5);
         color: #fff;
         font-size: 0.7rem;
-        font-weight: 500;
-
-        opacity: 0;                  /* hidden by default */
+        font-weight: 600;
+        opacity: 0;
         transition: opacity 0.25s ease;
-
-        pointer-events: none;        /* so hover stays responsive */
-        border-radius: 10px;         /* match thumbnail */
-        white-space: normal;         /* allow wrapping */
+        pointer-events: none;
+        border-radius: 12px;
+        white-space: normal;
         word-break: break-word;
     }
 
-    .thumb-btn:hover img {
-        filter: brightness(1);
-        transform: scale(1.04);
-    }
-
     .thumb-btn:hover .thumb-label {
-        opacity: 1;                  /* fade-in on hover */
+        opacity: 1;
     }
 
-    /* Active thumbnail (clean glow highlight) */
+    /* Selected thumbnail highlight */
     .thumb-btn-active {
         outline: none;
         box-shadow:
-            0 0 0 3px rgba(108, 116, 231, 0.35),
-            0 4px 14px rgba(64, 155, 150, 0.2);
+            0 0 0 3px rgba(59,130,246,0.35),
+            0 4px 14px rgba(0,0,0,0.20);
         border-radius: 12px;
         transform: translateY(-2px);
     }
 
-    
     /* =========================================================
        SWIPE + ZOOM + PAN
     ==========================================================*/
@@ -205,6 +203,31 @@
         position: relative;
         min-width: 0;
         min-height: 0;
+    }
+
+    /* Viewer loading overlay (per-viewer) */
+    .viewer-loading {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(3px);
+    }
+
+    .viewer-spinner {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 3px solid rgba(255,255,255,0.4);
+        border-top-color: #3b82f6;
+        animation: viewer-spin 0.8s linear infinite;
+    }
+
+    @keyframes viewer-spin {
+        to { transform: rotate(360deg); }
     }
 
     .comparison-slider {
@@ -220,9 +243,17 @@
         touch-action: pan-y;
         overflow: hidden;
         background: #000;
+
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease-out;
     }
 
-    /* Viewport wrapper (no transform anymore) */
+    .comparison-slider.ready {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
     .comparison-viewport {
         position: absolute;
         inset: 0;
@@ -234,8 +265,7 @@
         overflow: hidden;
     }
 
-    /* 🔑 Zoom & pan are applied directly to images,
-       so both layers move identically under the swipe line. */
+    /* Zoom & pan applied to both images */
     .comparison-layer img {
         width: 100%;
         height: 100%;
@@ -286,100 +316,54 @@
         box-shadow: 0 0 0 1px #aaa, 0 8px 16px rgba(0,0,0,0.25);
     }
 
-    /* Labels */
-    .comparison-label {
-        position: absolute;
-        top: 8px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        backdrop-filter: blur(6px);
-        z-index: 4;
-        overflow: hidden;
-    }
+    /* =========================================================
+       LABELS WITH FILL
+    ==========================================================*/
 
-    .comparison-label .label-text {
-        position: relative;
-        z-index: 2;
-    }
-
-    .comparison-label::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        z-index: 1;
-        pointer-events: none;
-    }
-
-    .comparison-label-after {
-        left: 8px;
-        background: #dbeafe;
-        color: #1e3a8a;
-    }
-
-    .comparison-label-after::before {
-        left: 0;
-        width: 100%;
-        background: rgba(37, 99, 235, 0.10);
-    }
-
-    .comparison-label-before {
-        right: 8px;
-        background: #fee2e2;
-        color: #7f1d1d;
-    }
-
-    .comparison-label-before::before {
-        right: 0;
-        width: 100%;
-        background: rgba(220, 38, 38, 0.10);
-    }
-
-    /* Frosted translucent pill */
     .comparison-label {
         position: absolute;
         top: 8px;
         padding: 4px 12px;
-        border-radius: 12px;
+        border-radius: 999px;
         font-size: 0.78rem;
         font-weight: 600;
-        backdrop-filter: blur(8px);
-        background: rgba(255, 255, 255, 0.4);   /* softer, cleaner */
         z-index: 4;
         overflow: hidden;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         pointer-events: none;
     }
 
-    /* Main label text */
+    .comparison-label-after {
+        left: 8px;
+        background: #dbeafe;           /* light blue */
+    }
+
+    .comparison-label-before {
+        right: 8px;
+        background: #fee2e2;           /* light pink */
+    }
+
     .label-text {
         position: relative;
         z-index: 3;
-        color: #1f2937;        /* soft grey */
-        font-weight: 600;
-        display: flex;
-        align-items: center;
+        display: inline-flex;
+        align-items: baseline;
         gap: 4px;
     }
 
-    /* Smaller descriptor text */
-    .label-text .subtext {
-        font-size: 0.65rem;     /* slightly smaller */
-        opacity: 0.75;          /* softer */
-        font-weight: 500;
-    }
-
-    /* Make (After) / (Before) bold but same size */
-    .label-text strong {
-        font-size: 0.78rem;
+    .label-main {
         font-weight: 700;
     }
 
-    /* Fill layer (very subtle tint) */
+
+    .label-sub {
+        font-size: 0.68rem;
+        color: #4b5563;
+    }
+
+    /* Fill bar (proportion indicator) */
     .label-fill {
         position: absolute;
         top: 0;
@@ -388,41 +372,33 @@
         z-index: 1;
         pointer-events: none;
         transition: width 0.14s ease-out;
-        opacity: 0.35;                   /* WAY softer */
-        mix-blend-mode: multiply;        /* blends into label naturally */
+        opacity: 0.6;
     }
 
-    /* AFTER — cool subtle tint */
     .label-fill-after {
         left: 0;
         background: linear-gradient(
             90deg,
-            rgba(96,165,250,0.45),       /* soft blue */
-            rgba(8, 76, 224, 0.45)
+            rgba(96, 165, 250, 0.6),
+            rgba(37, 99, 235, 0.6)
         );
     }
 
-    /* BEFORE — warm subtle tint */
     .label-fill-before {
         right: 0;
         background: linear-gradient(
             270deg,
-            rgba(248, 185, 113, 0.45),      /* soft red */
-            rgba(245, 40, 40, 0.45)
+            rgba(251, 113, 133, 0.6),
+            rgba(225, 29, 72, 0.6)
         );
     }
-
-    /* Label placement */
-    .comparison-label-after { left: 8px; }
-    .comparison-label-before { right: 8px; }
-
 
 </style>
 </head>
 
 <body>
 
-<!-- LOADER -->
+<!-- GLOBAL LOADER -->
 <div id="loaderScreen">
     <div class="spinner"></div>
     <div class="loadingText" id="loadingText"></div>
@@ -438,18 +414,17 @@
                     Drag to swipe • Ctrl + drag to pan • Mouse wheel to zoom
                 </div>
             </div>
-
-            <select id="imageSetSelect" class="set-select">
-                <option value="0">Set 1</option>
-                <option value="1">Set 2</option>
-            </select>
-
         </div>
 
         <div class="frame-body">
             <div class="thumbs-column" id="thumbList"></div>
 
             <div class="comparison-shell">
+                <!-- Per-viewer loading overlay -->
+                <div class="viewer-loading" id="viewerLoading">
+                    <div class="viewer-spinner"></div>
+                </div>
+
                 <div class="comparison-slider" id="comparisonSlider">
                     <div class="comparison-viewport" id="comparisonViewport">
                         <!-- Base (bottom) layer -->
@@ -466,14 +441,19 @@
                     <!-- Labels -->
                     <div class="comparison-label comparison-label-after">
                         <div class="label-fill label-fill-after" id="afterFill"></div>
-                        <span class="label-text"><strong>(After)</strong> <span class="subtext">Top Image</span></span>
+                        <span class="label-text">
+                            <span class="label-main">After</span>
+                            <span class="label-sub">(Top Image)</span>
+                        </span>
                     </div>
 
                     <div class="comparison-label comparison-label-before">
                         <div class="label-fill label-fill-before" id="beforeFill"></div>
-                        <span class="label-text"><strong>(Before)</strong> <span class="subtext">Bottom Image</span></span>
+                        <span class="label-text">
+                            <span class="label-main">Before</span>
+                            <span class="label-sub">(Bottom Image)</span>
+                        </span>
                     </div>
-
 
                     <!-- Handle -->
                     <div class="comparison-handle">
@@ -488,7 +468,7 @@
 
 <script>
 /* =========================================================
-   LOADER MESSAGES
+   GLOBAL LOADER MESSAGES
 ========================================================= */
 
 const funnyMessages = [
@@ -536,14 +516,13 @@ window.addEventListener("load", () => {
 
 let imageSets = [];
 
-const sliderEl   = document.getElementById("comparisonSlider");
-const baseImg    = document.getElementById("imgBase");
-const overlayImg = document.getElementById("imgOverlay");
-const thumbList  = document.getElementById("thumbList");
-const setSelect  = document.getElementById("imageSetSelect");
-const afterFillEl  = document.getElementById("afterFill");
-const beforeFillEl = document.getElementById("beforeFill");
-
+const sliderEl      = document.getElementById("comparisonSlider");
+const baseImg       = document.getElementById("imgBase");
+const overlayImg    = document.getElementById("imgOverlay");
+const thumbList     = document.getElementById("thumbList");
+const viewerLoading = document.getElementById("viewerLoading");
+const afterFillEl   = document.getElementById("afterFill");
+const beforeFillEl  = document.getElementById("beforeFill");
 
 let swipePercent = 50; // 0–100
 
@@ -551,7 +530,7 @@ function setSwipePercent(percent) {
     swipePercent = Math.max(0, Math.min(100, percent));
     sliderEl.style.setProperty("--percent", swipePercent);
 
-    // update fill bars
+    // update label fills
     afterFillEl.style.width  = swipePercent + "%";
     beforeFillEl.style.width = (100 - swipePercent) + "%";
 }
@@ -621,7 +600,6 @@ let panBaseX  = 0;
 let panBaseY  = 0;
 
 sliderEl.addEventListener("pointerdown", (e) => {
-    // Suppress context menu for easier pan on right-click if hit
     sliderEl.addEventListener("contextmenu", evt => evt.preventDefault());
 
     if (e.ctrlKey) {
@@ -671,7 +649,7 @@ sliderEl.addEventListener("pointerleave", () => {
 });
 
 /* =========================================================
-   THUMBNAILS / SELECT
+   THUMBNAILS / SET LOADING
 ========================================================= */
 
 function buildThumbnails() {
@@ -685,16 +663,6 @@ function buildThumbnails() {
         `;
         btn.addEventListener("click", () => loadSet(i));
         thumbList.appendChild(btn);
-    });
-}
-
-function buildSelect() {
-    setSelect.innerHTML = "";
-    imageSets.forEach((set, i) => {
-        const opt = document.createElement("option");
-        opt.value = String(i);
-        opt.textContent = set.id ? set.id : `Set ${i + 1}`;
-        setSelect.appendChild(opt);
     });
 }
 
@@ -712,23 +680,47 @@ function resetView() {
     setSwipePercent(50);
 }
 
+function waitForImages(imgA, imgB, callback) {
+    let loaded = 0;
+
+    function check() {
+        loaded++;
+        if (loaded === 2) callback();
+    }
+
+    [imgA, imgB].forEach((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+            check();
+        } else {
+            img.addEventListener("load", function handle() {
+                img.removeEventListener("load", handle);
+                check();
+            });
+        }
+    });
+}
+
 function loadSet(index) {
     const set = imageSets[index];
     if (!set) return;
 
-    // Base = "before", Overlay = "after"
+    // Hide swipe UI, show per-viewer loader
+    sliderEl.classList.remove("ready");
+    viewerLoading.style.display = "flex";
+
+    // Set new sources
     baseImg.src    = set.before;
     overlayImg.src = set.after;
 
     resetView();
     markActive(index);
-    setSelect.value = String(index);
-}
 
-setSelect.addEventListener("change", (e) => {
-    const idx = Number(e.target.value);
-    loadSet(idx);
-});
+    // Wait until both images loaded
+    waitForImages(baseImg, overlayImg, () => {
+        viewerLoading.style.display = "none";
+        sliderEl.classList.add("ready");
+    });
+}
 
 /* =========================================================
    Fetch sets.json and initialise viewer
@@ -755,8 +747,7 @@ async function loadImageSets() {
         }
 
         buildThumbnails();
-        buildSelect();
-        resetView();
+        // Load first set; loadSet handles spinner + ready class
         loadSet(0);
     } catch (err) {
         console.error("Error loading sets.json", err);
