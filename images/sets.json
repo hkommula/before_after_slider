@@ -1,0 +1,14 @@
+{
+  "sets": [
+    {
+      "id": "Martin",
+      "before": "images/Martin_before.jpg",
+      "after": "images/Martin_after.jpg"
+    },
+    {
+      "id": "Windang1",
+      "before": "images/Windang1_before.jpg",
+      "after": "images/Windang1_after.jpg"
+    }
+  ]
+}
