@@ -1,7 +1,7 @@
 # Setup Steps for Before/After Slider
 [![GitHub stars](https://img.shields.io/github/stars/hkommula/before_after_slider.svg)](https://github.com/hkommula/before_after_slider/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/hkommula/before_after_slider.svg)](https://github.com/hkommula/before_after_slider/network/members)
-[![GitHub license](https://img.shields.io/github/license/hkommula/before_after_slider.svg)](https://github.com/hkommula/before_after_slider/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hkommula/before_after_slider/blob/main/LICENSE)
 [![Top language](https://img.shields.io/github/languages/top/hkommula/before_after_slider.svg)](https://github.com/hkommula/before_after_slider)
 [![Repo size](https://img.shields.io/github/repo-size/hkommula/before_after_slider.svg)](https://github.com/hkommula/before_after_slider)
 
@@ -12,7 +12,8 @@ This is a simple browser-based before/after image comparison tool. You place you
 ## **What does it do?**
 It loads your image pairs, generates a `sets.json` file, and displays them in a clean slider UI through `index.html`. Everything updates automatically when you add or change images.
 
-
+## Example: 
+You can see a working example here: https://hkommula.github.io/before_after_slider/
 
 ## **Steps**
 1. **Clone the repository**
@@ -25,7 +26,7 @@ cd <your-repo>
 ```
 2. **Add your images** inside the `images` folder.
    * Images must follow this naming format: `XXXX_before.jpg` and `XXXX_after.jpg`
-   * Supported formats: `.jpg`, `.png`, `.JPG`, '.JPEG'. Each folder or pair of files becomes a slider set.
+   * Supported formats: `.jpg`, `.png`, `.JPG`, `.JPEG`. Each folder or pair of files becomes a slider set.
 
 3. **The tool runs from `index.html`**, which reads `sets.json` to know what image sets to load.
 
