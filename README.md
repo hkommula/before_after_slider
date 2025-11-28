@@ -86,11 +86,10 @@ jobs:
 
 8. **Done!** Your before/after slider is now live and updates automatically whenever you add or change images.
 
----
 
-## ⚠️ Limitations
+## Limitations
 - Does **not** work well on mobile devices.
 - Large image files (**>​25MB**) may cause slow performance or heavy browser load.
   
-## 📄 Open Source License
+## Open Source License
 This project uses the **MIT License** — you can use it freely for personal or commercial projects with proper attribution.
