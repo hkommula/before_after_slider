@@ -17,12 +17,10 @@ You can see a working example here: https://hkommula.github.io/before_after_slid
 
 ## **Steps**
 1. **Clone the repository**
-
    * Open a terminal and run:
 
 ```
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/hkommula/before_after_slider.git
 ```
 2. **Add your images** inside the `images` folder.
    * Images must follow this naming format: `XXXX_before.jpg` and `XXXX_after.jpg`
