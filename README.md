@@ -80,7 +80,7 @@ jobs:
 
 7. **Wait for updates to apply**:
    * After adding new images, **GitHub Actions takes ~1 minute** to generate the new `sets.json`.
-   * GitHub Pages then takes **about 1–2 minutes** to deploy the updated site.
+   * GitHub Pages then takes **about 1-2 minutes** to deploy the updated site.
 
 8. **Done!** Your before/after slider is now live and updates automatically whenever you add or change images.
 
@@ -90,4 +90,4 @@ jobs:
 - Large image files (**>​25MB**) may cause slow performance or heavy browser load.
   
 ## Open Source License
-This project uses the **MIT License** — you can use it freely for personal or commercial projects with proper attribution.
+This project uses the **MIT License** - you can use it freely for personal or commercial projects with proper attribution.
