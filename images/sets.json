@@ -16,6 +16,11 @@
       "after": "images/Martin_after.jpg"
     },
     {
+      "id": "TD1",
+      "before": "images/TD1_before.JPG",
+      "after": "images/TD1_after.jpg"
+    },
+    {
       "id": "Windang1",
       "before": "images/Windang1_before.jpg",
       "after": "images/Windang1_after.jpg"
